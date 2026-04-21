@@ -48,9 +48,7 @@ MADLAD_LANG_CODES: dict[str, str] = {
 class MadladEngine(TranslationEngine):
     """Translation using Google's Madlad-400 model."""
 
-    def __init__(
-        self, model_name: str = "google/madlad400-3b-mt", device: str = "auto"
-    ) -> None:
+    def __init__(self, model_name: str = "google/madlad400-3b-mt", device: str = "auto") -> None:
         self._model_name = model_name
         self._device = device
         self._model: Any = None

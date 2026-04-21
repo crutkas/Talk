@@ -68,9 +68,7 @@ class TestTranslationFactory:
         assert "Seamless" in engine.name
 
     def test_create_madlad(self) -> None:
-        engine = create_translation_engine(
-            "madlad-400", {"model_name": "google/madlad400-3b-mt"}
-        )
+        engine = create_translation_engine("madlad-400", {"model_name": "google/madlad400-3b-mt"})
         assert "Madlad" in engine.name
 
     def test_unknown_engine_raises(self) -> None:

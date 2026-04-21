@@ -45,15 +45,11 @@ class TestEngineFactory:
         assert "Whisper" in engine.name
 
     def test_create_canary_engine(self) -> None:
-        engine = create_engine(
-            "canary_qwen", {"endpoint": "http://localhost:9999/transcribe"}
-        )
+        engine = create_engine("canary_qwen", {"endpoint": "http://localhost:9999/transcribe"})
         assert "Canary" in engine.name
 
     def test_create_voxtral_engine(self) -> None:
-        engine = create_engine(
-            "voxtral", {"endpoint": "http://localhost:9999/transcribe"}
-        )
+        engine = create_engine("voxtral", {"endpoint": "http://localhost:9999/transcribe"})
         assert "Voxtral" in engine.name
 
     def test_create_qwen3_engine(self) -> None:
@@ -89,13 +85,9 @@ class TestHTTPEngines:
     """Tests for HTTP-based engines (without actual server)."""
 
     def test_canary_not_available_without_server(self) -> None:
-        engine = create_engine(
-            "canary_qwen", {"endpoint": "http://localhost:19999/transcribe"}
-        )
+        engine = create_engine("canary_qwen", {"endpoint": "http://localhost:19999/transcribe"})
         assert engine.is_available() is False
 
     def test_voxtral_not_available_without_server(self) -> None:
-        engine = create_engine(
-            "voxtral", {"endpoint": "http://localhost:19999/transcribe"}
-        )
+        engine = create_engine("voxtral", {"endpoint": "http://localhost:19999/transcribe"})
         assert engine.is_available() is False

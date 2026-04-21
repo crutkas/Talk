@@ -16,9 +16,7 @@ _ENGINE_MAP: dict[str, type[TranslationEngine]] = {
 }
 
 
-def create_translation_engine(
-    name: str, config: dict[str, Any] | None = None
-) -> TranslationEngine:
+def create_translation_engine(name: str, config: dict[str, Any] | None = None) -> TranslationEngine:
     """Create a translation engine by name with optional config.
 
     Args:

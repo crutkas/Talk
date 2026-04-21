@@ -28,9 +28,7 @@ class TestAudioRingBuffer:
         buf.write(np.ones(40, dtype=np.float32) * 0.7)
 
         snapshot = buf.snapshot(40)
-        np.testing.assert_array_almost_equal(
-            snapshot, np.ones(40, dtype=np.float32) * 0.7
-        )
+        np.testing.assert_array_almost_equal(snapshot, np.ones(40, dtype=np.float32) * 0.7)
 
     def test_write_more_than_buffer_size(self) -> None:
         buf = AudioRingBuffer(50)

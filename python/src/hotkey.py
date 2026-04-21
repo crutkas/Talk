@@ -107,8 +107,15 @@ class HotkeyManager:
 
         # The trigger key is the non-modifier key in the combo
         modifiers = {
-            "ctrl", "shift", "alt", "ctrl_l", "ctrl_r",
-            "shift_l", "shift_r", "alt_l", "alt_r",
+            "ctrl",
+            "shift",
+            "alt",
+            "ctrl_l",
+            "ctrl_r",
+            "shift_l",
+            "shift_r",
+            "alt_l",
+            "alt_r",
         }
         non_modifiers = self._hotkey_keys - modifiers
         self._trigger_key = non_modifiers.pop() if non_modifiers else "space"

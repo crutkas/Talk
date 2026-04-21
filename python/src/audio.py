@@ -105,9 +105,7 @@ def resample_audio(
     return np.interp(indices, np.arange(len(audio)), audio).astype(np.float32)
 
 
-def audio_to_wav_bytes(
-    audio: NDArray[np.float32], sample_rate: int = TARGET_SAMPLE_RATE
-) -> bytes:
+def audio_to_wav_bytes(audio: NDArray[np.float32], sample_rate: int = TARGET_SAMPLE_RATE) -> bytes:
     """Convert float32 audio array to WAV bytes."""
     # Convert float32 [-1, 1] to int16
     audio_int16 = np.clip(audio * 32767, -32768, 32767).astype(np.int16)

@@ -12,7 +12,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 try:
-    from PyQt6.QtGui import QAction
+    from PyQt6.QtGui import QAction, QIcon
     from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
     HAS_PYQT6 = True
@@ -52,6 +52,16 @@ class SystemTray:
 
         self._tray = QSystemTrayIcon()
         self._tray.setToolTip(self._build_tooltip())
+
+        # Set icon
+        icon_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "assets",
+            "icon.png",
+        )
+        if os.path.exists(icon_path):
+            self._tray.setIcon(QIcon(icon_path))
+
         self._build_menu()
 
     def _build_tooltip(self) -> str:
@@ -98,17 +108,24 @@ class SystemTray:
         # Target language selection
         lang_menu = menu.addMenu("Target Language")
         languages = {
-            "es": "Spanish", "fr": "French", "de": "German", "it": "Italian",
-            "pt": "Portuguese", "zh": "Chinese", "ja": "Japanese", "ko": "Korean",
-            "ar": "Arabic", "hi": "Hindi", "ru": "Russian", "nl": "Dutch",
+            "es": "Spanish",
+            "fr": "French",
+            "de": "German",
+            "it": "Italian",
+            "pt": "Portuguese",
+            "zh": "Chinese",
+            "ja": "Japanese",
+            "ko": "Korean",
+            "ar": "Arabic",
+            "hi": "Hindi",
+            "ru": "Russian",
+            "nl": "Dutch",
         }
         lang_group: list[QAction] = []
         for code, label in languages.items():
             action = QAction(f"{label} ({code})", checkable=True)
             action.setChecked(code == self._target_language)
-            action.triggered.connect(
-                lambda checked, c=code: self._select_target_language(c)
-            )
+            action.triggered.connect(lambda checked, c=code: self._select_target_language(c))
             lang_menu.addAction(action)
             lang_group.append(action)
         self._lang_actions = lang_group

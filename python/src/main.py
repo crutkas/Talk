@@ -168,9 +168,7 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
                 if self._overlay:
                     self._overlay.set_state_signal.emit("translating", self._target_language)
 
-                translated = self._translation_engine.translate(
-                    text, "en", self._target_language
-                )
+                translated = self._translation_engine.translate(text, "en", self._target_language)
                 if translated:
                     if self._overlay:
                         self._overlay.update_translation_text(translated)

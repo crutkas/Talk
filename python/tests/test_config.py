@@ -44,9 +44,7 @@ class TestLoadConfig:
     """Tests for config loading."""
 
     def test_load_from_explicit_path(self) -> None:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump({"hotkey": "alt+space", "default_model": "voxtral"}, f)
             f.flush()
             path = f.name
@@ -71,9 +69,7 @@ class TestLoadConfig:
         assert "ui" in config
 
     def test_partial_config_merges_defaults(self) -> None:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump({"hotkey": "f5"}, f)
             f.flush()
             path = f.name

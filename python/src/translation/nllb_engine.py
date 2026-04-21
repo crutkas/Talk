@@ -49,9 +49,7 @@ NLLB_LANG_CODES: dict[str, str] = {
 class NLLBEngine(TranslationEngine):
     """Translation using Meta's NLLB-200 model."""
 
-    def __init__(
-        self, model_name: str = "facebook/nllb-200-1.3B", device: str = "auto"
-    ) -> None:
+    def __init__(self, model_name: str = "facebook/nllb-200-1.3B", device: str = "auto") -> None:
         self._model_name = model_name
         self._device = device
         self._model: Any = None
