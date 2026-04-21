@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.coverage
+htmlcov/
+coverage.xml
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models (large files)
+*.bin
+*.safetensors
+*.gguf
+*.pt
+*.onnx
+
+# Rust
+target/
+
+# .NET
+bin/
+obj/
+*.user
+*.suo

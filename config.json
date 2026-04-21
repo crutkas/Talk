@@ -1,0 +1,62 @@
+{
+  "hotkey": "ctrl+shift+space",
+  "default_model": "whisper",
+  "models": {
+    "whisper": {
+      "enabled": true,
+      "mode": "in-process",
+      "model_size": "large-v3-turbo",
+      "device": "auto"
+    },
+    "canary_qwen": {
+      "enabled": true,
+      "mode": "http",
+      "endpoint": "http://localhost:8001/transcribe"
+    },
+    "voxtral": {
+      "enabled": true,
+      "mode": "http",
+      "endpoint": "http://localhost:8002/transcribe"
+    },
+    "qwen3_asr": {
+      "enabled": true,
+      "mode": "in-process",
+      "model_name": "Qwen/Qwen3-ASR-1.7B"
+    }
+  },
+  "audio": {
+    "sample_rate": 16000,
+    "channels": 1,
+    "format": "wav"
+  },
+  "translation": {
+    "enabled": false,
+    "target_language": "es",
+    "model": "nllb-200",
+    "models": {
+      "nllb-200": {
+        "mode": "in-process",
+        "model_name": "facebook/nllb-200-1.3B",
+        "device": "auto"
+      },
+      "seamless-m4t": {
+        "mode": "in-process",
+        "model_name": "facebook/seamless-m4t-v2-large",
+        "device": "auto"
+      },
+      "madlad-400": {
+        "mode": "in-process",
+        "model_name": "google/madlad400-3b-mt",
+        "device": "auto"
+      }
+    }
+  },
+  "ui": {
+    "overlay_width": 320,
+    "overlay_height": 120,
+    "waveform_color": "#4CAF50",
+    "processing_color": "#FF9800",
+    "translating_color": "#2196F3",
+    "opacity": 0.9
+  }
+}
