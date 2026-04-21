@@ -144,9 +144,33 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
         if self._overlay:
             self._overlay.set_state_signal.emit(
                 "recording",
-                f"🎤 {self._stt_engine.name} | Enter=send, Esc=cancel",
+                self._stt_engine.name,
             )
             self._overlay.show_signal.emit()
+
+        # Pre-load model while user is speaking
+        self._preload_model()
+
+    def _preload_model(self) -> None:
+        """Pre-load the STT model in background while user is speaking."""
+
+        def _load() -> None:
+            try:
+                if not self._stt_engine.is_available() or self._stt_engine.needs_download():
+
+                    def _progress(status: str) -> None:
+                        logger.info(status)
+                        if self._overlay:
+                            self._overlay.set_state_signal.emit("downloading", status)
+
+                    self._stt_engine.ensure_ready(progress_callback=_progress)
+                else:
+                    # Force model into memory
+                    self._stt_engine._ensure_model()  # type: ignore[attr-defined]
+            except Exception as e:
+                logger.warning("Pre-load failed (will retry on transcribe): %s", e)
+
+        threading.Thread(target=_load, daemon=True).start()
 
     def _handle_stop_recording(self) -> None:
         """Stop recording and start transcription — runs on Qt main thread."""
