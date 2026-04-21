@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Conditional imports
 try:
     from PyQt6.QtCore import QObject, pyqtSignal
-    from PyQt6.QtWidgets import QApplication
+    from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
     HAS_PYQT6 = True
 except ImportError:
@@ -148,6 +148,24 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
     def _transcribe_and_paste(self) -> None:
         """Transcribe audio and paste result. Runs in worker thread."""
         try:
+            # Check if model needs downloading first
+            if self._stt_engine.needs_download():
+                if self._overlay:
+                    self._overlay.set_state_signal.emit(
+                        "downloading",
+                        f"⬇️ Downloading {self._stt_engine.name}... (first time only)",
+                    )
+                    self._overlay.show_signal.emit()
+
+                def _progress(status: str) -> None:
+                    if self._overlay:
+                        self._overlay.set_state_signal.emit("downloading", status)
+
+                self._stt_engine.download_model(progress_callback=_progress)
+
+                if self._overlay:
+                    self._overlay.set_state_signal.emit("processing", self._stt_engine.name)
+
             audio = self._recorder.stop_recording()
             if len(audio) == 0:
                 logger.warning("No audio captured")
@@ -190,15 +208,23 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
         self._hotkey.state = AppState.IDLE
 
     def _on_model_change(self, name: str) -> None:
+        """Handle STT model change — downloads model if needed."""
         model_config = self._config.get("models", {}).get(name, {})
         self._stt_engine.cleanup()
         self._stt_engine = create_engine(name, model_config)
         logger.info("STT model changed to: %s", name)
 
+        # Auto-download in background if needed
+        if self._stt_engine.needs_download():
+            self._download_engine_async(self._stt_engine)
+
     def _on_translation_toggle(self, enabled: bool) -> None:
         self._translation_enabled = enabled
         if enabled and self._translation_engine is None:
             self._load_translation_engine()
+            # Auto-download translation model if needed
+            if self._translation_engine and self._translation_engine.needs_download():
+                self._download_engine_async(self._translation_engine)
         logger.info("Translation %s", "enabled" if enabled else "disabled")
 
     def _on_translation_model_change(self, name: str) -> None:
@@ -209,6 +235,53 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
 
         self._translation_engine = create_translation_engine(name, trans_config)
         logger.info("Translation model changed to: %s", name)
+
+        # Auto-download in background if needed
+        if self._translation_engine.needs_download():
+            self._download_engine_async(self._translation_engine)
+
+    def _download_engine_async(self, engine: Any) -> None:
+        """Download an engine's model in a background thread with UI feedback."""
+
+        def _do_download() -> None:
+            def _progress(status: str) -> None:
+                logger.info(status)
+                if self._overlay:
+                    self._overlay.set_state_signal.emit("downloading", status)
+
+            try:
+                if self._overlay:
+                    self._overlay.set_state_signal.emit(
+                        "downloading",
+                        f"⬇️ Downloading {engine.name}... (first time only)",
+                    )
+                    self._overlay.show_signal.emit()
+
+                engine.download_model(progress_callback=_progress)
+
+                if self._overlay:
+                    self._overlay.set_state_signal.emit("done", "")
+
+                # Tray notification
+                if hasattr(self, "_tray") and hasattr(self._tray, "_tray"):
+                    self._tray._tray.showMessage(
+                        "UniversalTranslator",
+                        f"✅ {engine.name} is ready to use.",
+                        QSystemTrayIcon.MessageIcon.Information,  # type: ignore[attr-defined]
+                        3000,
+                    )
+            except Exception as e:
+                logger.error("Model download failed: %s", e)
+                if hasattr(self, "_tray") and hasattr(self._tray, "_tray"):
+                    self._tray._tray.showMessage(
+                        "UniversalTranslator",
+                        f"❌ Failed to download {engine.name}: {e}",
+                        QSystemTrayIcon.MessageIcon.Warning,  # type: ignore[attr-defined]
+                        5000,
+                    )
+
+        worker = threading.Thread(target=_do_download, daemon=True)
+        worker.start()
 
     def _on_target_language_change(self, code: str) -> None:
         self._target_language = code
@@ -234,6 +307,22 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
     def run(self) -> None:
         """Start the application."""
         self._hotkey.start()
+
+        # Notify user if model needs downloading
+        if self._stt_engine.needs_download():
+            logger.info(
+                "Model %s will be downloaded on first use. This is a one-time operation.",
+                self._stt_engine.name,
+            )
+            if hasattr(self, "_tray") and hasattr(self._tray, "_tray"):
+                self._tray._tray.showMessage(
+                    "UniversalTranslator",
+                    f"{self._stt_engine.name} will be downloaded on first use.\n"
+                    "This is a one-time operation.",
+                    QSystemTrayIcon.MessageIcon.Information,  # type: ignore[attr-defined]
+                    5000,
+                )
+
         logger.info("UniversalTranslator ready. Hotkey: %s", self._config.get("hotkey"))
 
 

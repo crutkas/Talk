@@ -43,9 +43,13 @@ def create_engine(name: str, config: dict[str, Any] | None = None) -> STTEngine:
             device=config.get("device", "auto"),
         )
     elif name == "canary_qwen":
-        return CanaryQwenEngine(endpoint=config.get("endpoint", "http://localhost:8001/transcribe"))
+        return CanaryQwenEngine(
+            model_name=config.get("model_name", "nvidia/canary-qwen-2.5b"),
+        )
     elif name == "voxtral":
-        return VoxtralEngine(endpoint=config.get("endpoint", "http://localhost:8002/transcribe"))
+        return VoxtralEngine(
+            model_name=config.get("model_name", "mistralai/Voxtral-Mini-4B-Realtime-2602"),
+        )
     elif name == "qwen3_asr":
         return Qwen3ASREngine(model_name=config.get("model_name", "Qwen/Qwen3-ASR-1.7B"))
 

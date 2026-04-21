@@ -45,11 +45,11 @@ class TestEngineFactory:
         assert "Whisper" in engine.name
 
     def test_create_canary_engine(self) -> None:
-        engine = create_engine("canary_qwen", {"endpoint": "http://localhost:9999/transcribe"})
+        engine = create_engine("canary_qwen", {"model_name": "nvidia/canary-qwen-2.5b"})
         assert "Canary" in engine.name
 
     def test_create_voxtral_engine(self) -> None:
-        engine = create_engine("voxtral", {"endpoint": "http://localhost:9999/transcribe"})
+        engine = create_engine("voxtral", {"model_name": "mistralai/Voxtral-Mini-4B-Realtime-2602"})
         assert "Voxtral" in engine.name
 
     def test_create_qwen3_engine(self) -> None:
@@ -81,13 +81,29 @@ class TestWhisperEngine:
         engine.cleanup()  # should not raise
 
 
-class TestHTTPEngines:
-    """Tests for HTTP-based engines (without actual server)."""
+class TestInProcessEngines:
+    """Tests for in-process engines (without actual model files)."""
 
-    def test_canary_not_available_without_server(self) -> None:
-        engine = create_engine("canary_qwen", {"endpoint": "http://localhost:19999/transcribe"})
-        assert engine.is_available() is False
+    def test_canary_availability(self) -> None:
+        engine = create_engine("canary_qwen")
+        assert isinstance(engine.is_available(), bool)
 
-    def test_voxtral_not_available_without_server(self) -> None:
-        engine = create_engine("voxtral", {"endpoint": "http://localhost:19999/transcribe"})
-        assert engine.is_available() is False
+    def test_voxtral_availability(self) -> None:
+        engine = create_engine("voxtral")
+        assert isinstance(engine.is_available(), bool)
+
+    def test_canary_needs_download(self) -> None:
+        engine = create_engine("canary_qwen")
+        assert isinstance(engine.needs_download(), bool)
+
+    def test_voxtral_needs_download(self) -> None:
+        engine = create_engine("voxtral")
+        assert isinstance(engine.needs_download(), bool)
+
+    def test_whisper_needs_download(self) -> None:
+        engine = create_engine("whisper", {"model_size": "tiny"})
+        assert isinstance(engine.needs_download(), bool)
+
+    def test_qwen3_needs_download(self) -> None:
+        engine = create_engine("qwen3_asr")
+        assert isinstance(engine.needs_download(), bool)

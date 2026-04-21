@@ -4,17 +4,25 @@ from __future__ import annotations
 
 import io
 import logging
+import os
+from typing import Any
 
 from src.engines.base import STTEngine
 
 logger = logging.getLogger(__name__)
 
 try:
-    from faster_whisper import WhisperModel
+    from faster_whisper import WhisperModel, download_model
 
     HAS_FASTER_WHISPER = True
 except ImportError:
-    HAS_FASTER_WHISPER = False
+    try:
+        from faster_whisper import WhisperModel
+
+        HAS_FASTER_WHISPER = True
+        download_model = None  # type: ignore[assignment,misc]
+    except ImportError:
+        HAS_FASTER_WHISPER = False
 
 
 class WhisperEngine(STTEngine):
@@ -28,6 +36,39 @@ class WhisperEngine(STTEngine):
     @property
     def name(self) -> str:
         return f"Whisper ({self._model_size})"
+
+    def needs_download(self) -> bool:
+        """Check if the Whisper model needs to be downloaded."""
+        if not HAS_FASTER_WHISPER:
+            return False
+        # Check if model exists in the default cache directory
+        cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
+        # Model names like "large-v3-turbo" map to repo names
+        model_repo = f"models--Systran--faster-whisper-{self._model_size}"
+        model_path = os.path.join(cache_dir, model_repo)
+        return not os.path.exists(model_path)
+
+    def download_model(self, progress_callback: Any | None = None) -> None:
+        """Download the Whisper model with progress updates."""
+        if not HAS_FASTER_WHISPER:
+            raise RuntimeError("faster-whisper is not installed")
+
+        if progress_callback:
+            progress_callback(f"⬇️ Downloading Whisper {self._model_size}...")
+
+        logger.info("Downloading Whisper model: %s", self._model_size)
+
+        # Loading the model triggers the download
+        self._model = WhisperModel(
+            self._model_size,
+            device=self._device,
+            compute_type="auto",
+        )
+
+        if progress_callback:
+            progress_callback(f"✅ Whisper {self._model_size} ready")
+
+        logger.info("Whisper model downloaded and loaded: %s", self._model_size)
 
     def _ensure_model(self) -> None:
         if self._model is None:

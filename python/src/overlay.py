@@ -32,6 +32,7 @@ class OverlayState:
     RECORDING = "recording"
     PROCESSING = "processing"
     TRANSLATING = "translating"
+    DOWNLOADING = "downloading"
     DONE = "done"
     HIDDEN = "hidden"
 
@@ -258,6 +259,13 @@ if HAS_PYQT6:
                     "color: #2196F3; font-size: 11px; background: transparent;"
                 )
                 self._translation_label.show()
+
+            elif state == OverlayState.DOWNLOADING:
+                self._waveform.set_color(self._processing_color)
+                self._status_label.setText(extra_text or "⬇️ Downloading model...")
+                self._status_label.setStyleSheet(
+                    "color: #FF9800; font-size: 11px; background: transparent;"
+                )
 
             elif state == OverlayState.DONE:
                 self._status_label.setText("✅ Done")

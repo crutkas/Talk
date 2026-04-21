@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import io
 import logging
+import os
+from typing import Any
 
 from src.engines.base import STTEngine
 
@@ -27,6 +29,23 @@ class Qwen3ASREngine(STTEngine):
     @property
     def name(self) -> str:
         return "Qwen3-ASR"
+
+    def needs_download(self) -> bool:
+        if not HAS_QWEN_ASR:
+            return False
+        cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
+        repo_name = self._model_name.replace("/", "--")
+        return not os.path.exists(os.path.join(cache_dir, f"models--{repo_name}"))
+
+    def download_model(self, progress_callback: Any | None = None) -> None:
+        if not HAS_QWEN_ASR:
+            raise RuntimeError("qwen-asr is not installed")
+        if progress_callback:
+            progress_callback(f"⬇️ Downloading {self.name}...")
+        logger.info("Downloading Qwen3-ASR model: %s", self._model_name)
+        self._model = qwen_asr.load(self._model_name)
+        if progress_callback:
+            progress_callback(f"✅ {self.name} ready")
 
     def _ensure_model(self) -> None:
         if self._model is None:

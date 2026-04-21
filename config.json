@@ -10,13 +10,13 @@
     },
     "canary_qwen": {
       "enabled": true,
-      "mode": "http",
-      "endpoint": "http://localhost:8001/transcribe"
+      "mode": "in-process",
+      "model_name": "nvidia/canary-qwen-2.5b"
     },
     "voxtral": {
       "enabled": true,
-      "mode": "http",
-      "endpoint": "http://localhost:8002/transcribe"
+      "mode": "in-process",
+      "model_name": "mistralai/Voxtral-Mini-4B-Realtime-2602"
     },
     "qwen3_asr": {
       "enabled": true,

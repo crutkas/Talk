@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Generator
+from typing import Any
 
 
 class TranslationEngine(ABC):
@@ -17,26 +18,13 @@ class TranslationEngine(ABC):
 
     @abstractmethod
     def translate(self, text: str, source_lang: str, target_lang: str) -> str:
-        """Translate text from source to target language.
-
-        Args:
-            text: Text to translate.
-            source_lang: Source language code (e.g., 'en').
-            target_lang: Target language code (e.g., 'es').
-
-        Returns:
-            Translated text string.
-        """
+        """Translate text from source to target language."""
         ...
 
     def translate_streaming(
         self, text: str, source_lang: str, target_lang: str
     ) -> Generator[str, None, None]:
-        """Translate with streaming output. Yields partial results.
-
-        Default implementation returns the full result as a single chunk.
-        Override for true streaming support.
-        """
+        """Translate with streaming output. Yields partial results."""
         yield self.translate(text, source_lang, target_lang)
 
     @abstractmethod
@@ -47,6 +35,17 @@ class TranslationEngine(ABC):
     def is_available(self) -> bool:
         """Check if this engine is ready to use."""
         return True
+
+    def needs_download(self) -> bool:
+        """Check if this engine needs to download a model before first use."""
+        return False
+
+    def download_model(self, progress_callback: Any | None = None) -> None:  # noqa: B027
+        """Download the model if needed. Override in subclasses.
+
+        Args:
+            progress_callback: Optional callable(status_text: str) for progress updates.
+        """
 
     def cleanup(self) -> None:  # noqa: B027
         """Release resources held by the engine."""

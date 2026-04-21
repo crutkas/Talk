@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from src.translation.base import TranslationEngine
@@ -58,6 +59,23 @@ class NLLBEngine(TranslationEngine):
     @property
     def name(self) -> str:
         return "NLLB-200"
+
+    def needs_download(self) -> bool:
+        if not HAS_TRANSFORMERS:
+            return False
+        cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
+        repo_name = self._model_name.replace("/", "--")
+        return not os.path.exists(os.path.join(cache_dir, f"models--{repo_name}"))
+
+    def download_model(self, progress_callback: Any | None = None) -> None:
+        if not HAS_TRANSFORMERS:
+            raise RuntimeError("transformers is not installed")
+        if progress_callback:
+            progress_callback(f"⬇️ Downloading {self.name}...")
+        logger.info("Downloading NLLB model: %s", self._model_name)
+        self._ensure_model()
+        if progress_callback:
+            progress_callback(f"✅ {self.name} ready")
 
     def _ensure_model(self) -> None:
         if self._model is None:

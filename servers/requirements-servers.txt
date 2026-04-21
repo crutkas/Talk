@@ -1,0 +1,23 @@
+# Server dependencies
+# Install with: pip install -r requirements-servers.txt
+
+# HTTP server framework
+fastapi>=0.111
+uvicorn>=0.30
+pydantic>=2.7
+
+# Audio processing
+numpy>=1.26
+torchaudio>=2.3
+
+# STT models (install the ones you need)
+# faster-whisper>=1.0          # For Whisper (not needed as server, runs in-process)
+# nemo_toolkit[asr]>=1.23      # For Canary Qwen 2.5B
+# qwen-asr>=0.1                # For Qwen3-ASR
+
+# Translation models
+transformers>=4.40
+sentencepiece>=0.2
+
+# Uncomment as needed:
+# torch>=2.3                   # Required for most models
