@@ -1,5 +1,5 @@
 {
-  "hotkey": "ctrl+shift+space",
+  "hotkey": "win+ctrl+h",
   "default_model": "whisper",
   "models": {
     "whisper": {

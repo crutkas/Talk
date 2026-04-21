@@ -3,6 +3,11 @@
 Uses pynput for global keyboard listening. Communicates with Qt via
 thread-safe signals to avoid cross-thread UI access.
 
+Interaction model:
+  - Invoke hotkey (e.g. Ctrl+Shift+T) → starts recording, shows overlay
+  - Enter → stops recording, transcribes, pastes
+  - Esc → cancels recording, dismisses overlay
+
 State machine: IDLE -> RECORDING -> PROCESSING -> IDLE
 """
 
@@ -34,7 +39,7 @@ class AppState(Enum):
 
 
 def parse_hotkey(hotkey_str: str) -> set[str]:
-    """Parse a hotkey string like 'ctrl+shift+space' into a set of key names."""
+    """Parse a hotkey string like 'ctrl+shift+t' into a set of key names."""
     return {k.strip().lower() for k in hotkey_str.split("+")}
 
 
@@ -51,6 +56,10 @@ if HAS_PYNPUT:
         "alt": keyboard.Key.alt_l,
         "alt_l": keyboard.Key.alt_l,
         "alt_r": keyboard.Key.alt_r,
+        "win": keyboard.Key.cmd,
+        "cmd": keyboard.Key.cmd,
+        "win_l": keyboard.Key.cmd_l,
+        "win_r": keyboard.Key.cmd_r,
         "space": keyboard.Key.space,
         "tab": keyboard.Key.tab,
         "enter": keyboard.Key.enter,
@@ -72,6 +81,8 @@ def _key_to_name(key: keyboard.Key | keyboard.KeyCode) -> str | None:  # type: i
             return "shift"
         if name.startswith("alt"):
             return "alt"
+        if name.startswith("cmd"):
+            return "win"
         return str(name)
     elif isinstance(key, keyboard.KeyCode):
         if key.char:
@@ -82,26 +93,29 @@ def _key_to_name(key: keyboard.Key | keyboard.KeyCode) -> str | None:  # type: i
 
 
 class HotkeyManager:
-    """Manages global hotkey detection with push-to-talk semantics.
+    """Manages global hotkey detection with invoke/dismiss semantics.
 
-    The trigger key is the last key in the hotkey combo (e.g., 'space' in
-    'ctrl+shift+space'). Modifier keys must be held for the hotkey to activate.
-    Recording starts on trigger key press and stops on trigger key release.
+    Invoke hotkey (e.g. Ctrl+Shift+T) → starts recording, shows overlay.
+    While recording:
+      - Enter → confirm: stop recording, transcribe, paste
+      - Esc → cancel: stop recording, dismiss overlay
     """
 
     def __init__(
         self,
-        hotkey_str: str = "ctrl+shift+space",
+        hotkey_str: str = "win+ctrl+h",
         on_start: Callable[[], None] | None = None,
         on_stop: Callable[[], None] | None = None,
+        on_cancel: Callable[[], None] | None = None,
     ) -> None:
         self._hotkey_keys = parse_hotkey(hotkey_str)
         self._on_start = on_start
         self._on_stop = on_stop
+        self._on_cancel = on_cancel
         self._pressed_keys: set[str] = set()
         self._state = AppState.IDLE
         self._listener: keyboard.Listener | None = None  # type: ignore[assignment]
-        self._debounce_time = 0.2  # seconds
+        self._debounce_time = 0.3  # seconds
         self._last_trigger_time = 0.0
         self._lock = threading.Lock()
 
@@ -110,15 +124,19 @@ class HotkeyManager:
             "ctrl",
             "shift",
             "alt",
+            "win",
+            "cmd",
             "ctrl_l",
             "ctrl_r",
             "shift_l",
             "shift_r",
             "alt_l",
             "alt_r",
+            "win_l",
+            "win_r",
         }
         non_modifiers = self._hotkey_keys - modifiers
-        self._trigger_key = non_modifiers.pop() if non_modifiers else "space"
+        self._trigger_key = non_modifiers.pop() if non_modifiers else "t"
 
     @property
     def state(self) -> AppState:
@@ -136,15 +154,35 @@ class HotkeyManager:
 
         self._pressed_keys.add(name)
 
-        # Check if all hotkey keys are pressed and trigger key was just pressed
-        if name == self._trigger_key and self._hotkey_keys.issubset(self._pressed_keys):
+        with self._lock:
+            current_state = self._state
+
+        # While recording, listen for Enter (confirm) or Esc (cancel)
+        if current_state == AppState.RECORDING:
+            if name == "enter":
+                with self._lock:
+                    self._state = AppState.PROCESSING
+                if self._on_stop:
+                    self._on_stop()
+                return
+            elif name == "esc":
+                with self._lock:
+                    self._state = AppState.IDLE
+                if self._on_cancel:
+                    self._on_cancel()
+                return
+
+        # Check if invoke hotkey combo is pressed
+        if (
+            current_state == AppState.IDLE
+            and name == self._trigger_key
+            and self._hotkey_keys.issubset(self._pressed_keys)
+        ):
             now = time.monotonic()
             if now - self._last_trigger_time < self._debounce_time:
                 return
 
             with self._lock:
-                if self._state != AppState.IDLE:
-                    return
                 self._state = AppState.RECORDING
                 self._last_trigger_time = now
 
@@ -155,18 +193,6 @@ class HotkeyManager:
         name = _key_to_name(key)
         if name is None:
             return
-
-        # Only stop on trigger key release while recording
-        if name == self._trigger_key:
-            with self._lock:
-                if self._state != AppState.RECORDING:
-                    self._pressed_keys.discard(name)
-                    return
-                self._state = AppState.PROCESSING
-
-            if self._on_stop:
-                self._on_stop()
-
         self._pressed_keys.discard(name)
 
     def start(self) -> None:
@@ -177,10 +203,14 @@ class HotkeyManager:
         self._listener = keyboard.Listener(
             on_press=self._on_press,
             on_release=self._on_release,
+            suppress=False,
         )
         self._listener.daemon = True
         self._listener.start()
-        logger.info("Hotkey listener started: %s", "+".join(sorted(self._hotkey_keys)))
+        logger.info(
+            "Hotkey listener started: %s (Enter=send, Esc=cancel)",
+            "+".join(sorted(self._hotkey_keys)),
+        )
 
     def stop(self) -> None:
         """Stop listening for the global hotkey."""

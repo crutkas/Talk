@@ -36,6 +36,7 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
     if HAS_PYQT6:
         start_recording_signal = pyqtSignal()
         stop_recording_signal = pyqtSignal()
+        cancel_recording_signal = pyqtSignal()
 
     def __init__(self, config: dict[str, Any]) -> None:
         if HAS_PYQT6:
@@ -60,14 +61,16 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
 
         # Hotkey manager
         self._hotkey = HotkeyManager(
-            hotkey_str=config.get("hotkey", "ctrl+shift+space"),
+            hotkey_str=config.get("hotkey", "win+ctrl+h"),
             on_start=self._on_hotkey_start,
             on_stop=self._on_hotkey_stop,
+            on_cancel=self._on_hotkey_cancel,
         )
 
         if HAS_PYQT6:
             self.start_recording_signal.connect(self._handle_start_recording)
             self.stop_recording_signal.connect(self._handle_stop_recording)
+            self.cancel_recording_signal.connect(self._handle_cancel_recording)
 
     def _init_overlay(self) -> None:
         """Initialize the overlay window (must be called after QApplication)."""
@@ -112,11 +115,18 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
             self._handle_start_recording()
 
     def _on_hotkey_stop(self) -> None:
-        """Called from pynput thread when hotkey is released."""
+        """Called from pynput thread when Enter is pressed during recording."""
         if HAS_PYQT6:
             self.stop_recording_signal.emit()
         else:
             self._handle_stop_recording()
+
+    def _on_hotkey_cancel(self) -> None:
+        """Called from pynput thread when Esc is pressed during recording."""
+        if HAS_PYQT6:
+            self.cancel_recording_signal.emit()
+        else:
+            self._handle_cancel_recording()
 
     def _handle_start_recording(self) -> None:
         """Start recording — runs on Qt main thread."""
@@ -127,11 +137,15 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
             self._recorder.start_recording()
         except RuntimeError as e:
             logger.error("Failed to start recording: %s", e)
+            self._show_error(f"❌ Mic error: {e}")
             self._hotkey.state = AppState.IDLE
             return
 
         if self._overlay:
-            self._overlay.set_state_signal.emit("recording", self._stt_engine.name)
+            self._overlay.set_state_signal.emit(
+                "recording",
+                f"🎤 {self._stt_engine.name} | Enter=send, Esc=cancel",
+            )
             self._overlay.show_signal.emit()
 
     def _handle_stop_recording(self) -> None:
@@ -145,61 +159,113 @@ class AppController(QObject if HAS_PYQT6 else object):  # type: ignore[misc]
         worker = threading.Thread(target=self._transcribe_and_paste, daemon=True)
         worker.start()
 
+    def _handle_cancel_recording(self) -> None:
+        """Cancel recording — discard audio and hide overlay."""
+        import contextlib
+
+        logger.info("Recording cancelled")
+        with contextlib.suppress(Exception):
+            self._recorder.stop_recording()
+        if self._overlay:
+            self._overlay.hide_signal.emit()
+        self._hotkey.state = AppState.IDLE
+
     def _transcribe_and_paste(self) -> None:
         """Transcribe audio and paste result. Runs in worker thread."""
         try:
-            # Check if model needs downloading first
-            if self._stt_engine.needs_download():
+            # Ensure engine is ready (install deps + download model)
+            def _progress(status: str) -> None:
+                logger.info(status)
+                if self._overlay:
+                    self._overlay.set_state_signal.emit("downloading", status)
+
+            if not self._stt_engine.is_available() or self._stt_engine.needs_download():
                 if self._overlay:
                     self._overlay.set_state_signal.emit(
                         "downloading",
-                        f"⬇️ Downloading {self._stt_engine.name}... (first time only)",
+                        f"⚙️ Setting up {self._stt_engine.name}...",
                     )
-                    self._overlay.show_signal.emit()
 
-                def _progress(status: str) -> None:
-                    if self._overlay:
-                        self._overlay.set_state_signal.emit("downloading", status)
-
-                self._stt_engine.download_model(progress_callback=_progress)
+                if not self._stt_engine.ensure_ready(progress_callback=_progress):
+                    self._show_error(f"❌ Failed to set up {self._stt_engine.name}")
+                    return
 
                 if self._overlay:
                     self._overlay.set_state_signal.emit("processing", self._stt_engine.name)
 
             audio = self._recorder.stop_recording()
             if len(audio) == 0:
-                logger.warning("No audio captured")
-                self._finish()
+                self._show_error("❌ No audio captured — check microphone")
                 return
 
             wav_bytes = self._recorder.get_wav_bytes(audio)
-            text = self._stt_engine.transcribe(wav_bytes)
+
+            try:
+                text = self._stt_engine.transcribe(wav_bytes)
+            except RuntimeError as e:
+                self._show_error(f"❌ {self._stt_engine.name}: {e}")
+                return
 
             if not text.strip():
-                logger.warning("Empty transcription")
-                self._finish()
+                self._show_error("❌ No speech detected")
                 return
 
             logger.info("Transcribed: %s", text[:100])
 
             # Translation step (if enabled)
             if self._translation_enabled and self._translation_engine is not None:
+                # Ensure translation engine is ready too
+                if (
+                    not self._translation_engine.is_available()
+                    or self._translation_engine.needs_download()
+                ):
+                    if self._overlay:
+                        self._overlay.set_state_signal.emit(
+                            "downloading",
+                            f"⚙️ Setting up {self._translation_engine.name}...",
+                        )
+                    if not self._translation_engine.ensure_ready(progress_callback=_progress):
+                        self._show_error(f"❌ Failed to set up {self._translation_engine.name}")
+                        return
+
                 if self._overlay:
                     self._overlay.set_state_signal.emit("translating", self._target_language)
 
-                translated = self._translation_engine.translate(text, "en", self._target_language)
-                if translated:
-                    if self._overlay:
-                        self._overlay.update_translation_text(translated)
-                    text = translated
+                try:
+                    translated = self._translation_engine.translate(
+                        text, "en", self._target_language
+                    )
+                    if translated:
+                        if self._overlay:
+                            self._overlay.update_translation_text(translated)
+                        text = translated
+                except Exception as e:
+                    logger.error("Translation failed: %s", e)
+                    self._show_error(f"❌ Translation failed: {e}")
+                    return
 
             # Paste
             self._paste_manager.paste_text(text)
             self._finish()
 
         except Exception as e:
-            logger.error("Transcription/translation failed: %s", e)
-            self._finish()
+            logger.error("Transcription failed: %s", e)
+            self._show_error(f"❌ {e}")
+
+    def _show_error(self, message: str) -> None:
+        """Show an error to the user via overlay and tray."""
+        logger.error(message)
+        if self._overlay:
+            self._overlay.set_state_signal.emit("error", message)
+            self._overlay.show_signal.emit()
+        if hasattr(self, "_tray") and hasattr(self._tray, "_tray"):
+            self._tray._tray.showMessage(
+                "UniversalTranslator",
+                message,
+                QSystemTrayIcon.MessageIcon.Warning,  # type: ignore[attr-defined]
+                5000,
+            )
+        self._hotkey.state = AppState.IDLE
 
     def _finish(self) -> None:
         """Complete the pipeline — show done state and clean up."""

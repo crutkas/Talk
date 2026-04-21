@@ -49,6 +49,11 @@ MADLAD_LANG_CODES: dict[str, str] = {
 class MadladEngine(TranslationEngine):
     """Translation using Google's Madlad-400 model."""
 
+    REQUIRED_PACKAGES = {
+        "transformers": "transformers>=4.40",
+        "sentencepiece": "sentencepiece>=0.2",
+    }
+
     def __init__(self, model_name: str = "google/madlad400-3b-mt", device: str = "auto") -> None:
         self._model_name = model_name
         self._device = device

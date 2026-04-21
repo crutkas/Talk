@@ -33,6 +33,7 @@ class OverlayState:
     PROCESSING = "processing"
     TRANSLATING = "translating"
     DOWNLOADING = "downloading"
+    ERROR = "error"
     DONE = "done"
     HIDDEN = "hidden"
 
@@ -273,6 +274,14 @@ if HAS_PYQT6:
                     "color: #4CAF50; font-size: 11px; background: transparent;"
                 )
                 self._done_timer.start(800)
+
+            elif state == OverlayState.ERROR:
+                self._waveform.freeze()
+                self._status_label.setText(extra_text or "❌ Error")
+                self._status_label.setStyleSheet(
+                    "color: #F44336; font-size: 11px; background: transparent;"
+                )
+                self._done_timer.start(4000)
 
         def _auto_hide(self) -> None:
             self.hide_signal.emit()

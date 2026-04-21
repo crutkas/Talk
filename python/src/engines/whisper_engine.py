@@ -28,6 +28,8 @@ except ImportError:
 class WhisperEngine(STTEngine):
     """Speech-to-text using faster-whisper (CTranslate2)."""
 
+    REQUIRED_PACKAGES = {"faster_whisper": "faster-whisper>=1.0"}
+
     def __init__(self, model_size: str = "large-v3-turbo", device: str = "auto") -> None:
         self._model_size = model_size
         self._device = device

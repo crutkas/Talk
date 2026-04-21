@@ -42,6 +42,8 @@ SEAMLESS_LANG_CODES: dict[str, str] = {
 class SeamlessEngine(TranslationEngine):
     """Translation using Meta's SeamlessM4T v2."""
 
+    REQUIRED_PACKAGES = {"transformers": "transformers>=4.40"}
+
     def __init__(
         self,
         model_name: str = "facebook/seamless-m4t-v2-large",

@@ -35,6 +35,11 @@ except ImportError:
 class VoxtralEngine(STTEngine):
     """Speech-to-text using Voxtral Transcribe 2 in-process."""
 
+    REQUIRED_PACKAGES = {
+        "transformers": "transformers>=4.40",
+        "torchaudio": "torchaudio>=2.3",
+    }
+
     def __init__(
         self, model_name: str = "mistralai/Voxtral-Mini-4B-Realtime-2602", **kwargs: Any
     ) -> None:
