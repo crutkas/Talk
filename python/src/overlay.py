@@ -33,18 +33,13 @@ try:
 except ImportError:
     HAS_PYQT6 = False
 
+HAS_FLUENT = False
 try:
-    from qfluentwidgets import (
-        BodyLabel,
-        CaptionLabel,
-        IndeterminateProgressBar,
-        Theme,
-        setTheme,
-    )
+    import qfluentwidgets  # noqa: F401
 
     HAS_FLUENT = True
 except ImportError:
-    HAS_FLUENT = False
+    pass
 
 
 class OverlayState:
@@ -188,6 +183,8 @@ if HAS_PYQT6:
             self._state = OverlayState.HIDDEN
 
             if HAS_FLUENT:
+                from qfluentwidgets import Theme, setTheme
+
                 setTheme(Theme.DARK)
 
             self.setWindowFlags(
@@ -206,11 +203,25 @@ if HAS_PYQT6:
             layout.setContentsMargins(20, 16, 20, 16)
             layout.setSpacing(4)
 
+            # Import Fluent widgets (deferred to avoid QWidget-before-QApplication)
+            if HAS_FLUENT:
+                from qfluentwidgets import (  # noqa: I001
+                    BodyLabel,
+                    CaptionLabel,
+                    IndeterminateProgressBar,
+                )
+
+                fluent_body = BodyLabel
+                fluent_caption = CaptionLabel
+                fluent_progress = IndeterminateProgressBar
+            else:
+                fluent_body = fluent_caption = fluent_progress = None  # type: ignore[assignment]
+
             # Title row
             title_row = QHBoxLayout()
             title_row.setSpacing(8)
-            if HAS_FLUENT:
-                self._title_label = CaptionLabel("UNIVERSALTRANSLATOR")
+            if fluent_caption:
+                self._title_label = fluent_caption("UNIVERSALTRANSLATOR")
             else:
                 self._title_label = QWidget()  # type: ignore[assignment]
             self._title_label.setStyleSheet(  # type: ignore[union-attr]
@@ -220,8 +231,8 @@ if HAS_PYQT6:
             title_row.addStretch()
 
             # Model badge
-            if HAS_FLUENT:
-                self._model_badge = CaptionLabel("")
+            if fluent_caption:
+                self._model_badge = fluent_caption("")
             else:
                 self._model_badge = QWidget()  # type: ignore[assignment]
             self._model_badge.setStyleSheet(  # type: ignore[union-attr]
@@ -238,8 +249,8 @@ if HAS_PYQT6:
             layout.addWidget(self._waveform)
 
             # Progress bar (Fluent indeterminate)
-            if HAS_FLUENT:
-                self._progress = IndeterminateProgressBar(self)
+            if fluent_progress:
+                self._progress = fluent_progress(self)
             else:
                 self._progress = QWidget()  # type: ignore[assignment]
             self._progress.setFixedHeight(4)  # type: ignore[union-attr]
@@ -247,8 +258,8 @@ if HAS_PYQT6:
             layout.addWidget(self._progress)  # type: ignore[arg-type]
 
             # Status label
-            if HAS_FLUENT:
-                self._status_label = BodyLabel("Ready")
+            if fluent_body:
+                self._status_label = fluent_body("Ready")
             else:
                 self._status_label = QWidget()  # type: ignore[assignment]
             self._status_label.setStyleSheet(  # type: ignore[union-attr]
@@ -258,8 +269,8 @@ if HAS_PYQT6:
             layout.addWidget(self._status_label)  # type: ignore[arg-type]
 
             # Detail label
-            if HAS_FLUENT:
-                self._detail_label = CaptionLabel("")
+            if fluent_caption:
+                self._detail_label = fluent_caption("")
             else:
                 self._detail_label = QWidget()  # type: ignore[assignment]
             self._detail_label.setStyleSheet(  # type: ignore[union-attr]
@@ -269,8 +280,8 @@ if HAS_PYQT6:
             layout.addWidget(self._detail_label)  # type: ignore[arg-type]
 
             # Translation label
-            if HAS_FLUENT:
-                self._translation_label = BodyLabel("")
+            if fluent_body:
+                self._translation_label = fluent_body("")
             else:
                 self._translation_label = QWidget()  # type: ignore[assignment]
             self._translation_label.setStyleSheet(  # type: ignore[union-attr]
