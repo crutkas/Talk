@@ -53,7 +53,7 @@ if HAS_PYQT6:
 
         def __init__(self, parent: QWidget | None = None) -> None:
             super().__init__(parent)
-            self.setFixedSize(48, 48)
+            self.setFixedSize(72, 72)
             self._state = "idle"
             self._pulse = 0.0
             self._spin_angle = 0.0
@@ -71,7 +71,7 @@ if HAS_PYQT6:
             self._state = state
 
         def _tick(self) -> None:
-            self._pulse = (self._pulse + 0.08) % (2 * math.pi)
+            self._pulse = (self._pulse + 0.12) % (2 * math.pi)
             self._spin_angle = (self._spin_angle + 6) % 360
             self.update()
 
@@ -82,17 +82,22 @@ if HAS_PYQT6:
             r = 20.0
 
             if self._state == "recording":
-                # Pulsing ring based on audio level
+                # Audio level
                 level = 0.3
                 if self._ring_buffer is not None:
                     samples = self._ring_buffer.snapshot(512)
-                    level = min(float(np.abs(samples).mean()) * 12, 1.0)
+                    level = min(float(np.abs(samples).mean()) * 15, 1.0)
 
-                pulse_r = r + 2 + level * 6 + math.sin(self._pulse) * 2
-                ring_color = QColor(96, 205, 255, int(80 + level * 120))
-                p.setPen(QPen(ring_color, 2.5))
-                p.setBrush(Qt.BrushStyle.NoBrush)
-                p.drawEllipse(QRectF(cx - pulse_r, cy - pulse_r, pulse_r * 2, pulse_r * 2))
+                # Outer pulsing rings (multiple for movement)
+                for i in range(3):
+                    phase = self._pulse + i * (2 * math.pi / 3)
+                    ring_r = r + 4 + level * 8 + math.sin(phase) * 4
+                    alpha = int(30 + level * 50 - i * 15)
+                    if alpha > 0:
+                        ring_color = QColor(96, 205, 255, alpha)
+                        p.setPen(QPen(ring_color, 2.0))
+                        p.setBrush(Qt.BrushStyle.NoBrush)
+                        p.drawEllipse(QRectF(cx - ring_r, cy - ring_r, ring_r * 2, ring_r * 2))
 
                 # Filled circle
                 p.setPen(Qt.PenStyle.NoPen)
@@ -169,8 +174,8 @@ if HAS_PYQT6:
 
         def __init__(
             self,
-            width: int = 280,
-            height: int = 64,
+            width: int = 300,
+            height: int = 80,
             **kwargs: object,
         ) -> None:
             super().__init__()
@@ -193,8 +198,8 @@ if HAS_PYQT6:
 
             # Layout: [status text] [mic indicator] [close btn]
             layout = QHBoxLayout(self)
-            layout.setContentsMargins(16, 8, 12, 8)
-            layout.setSpacing(8)
+            layout.setContentsMargins(20, 4, 12, 4)
+            layout.setSpacing(12)
 
             # Status text (left side)
             text_col = QVBoxLayout()
