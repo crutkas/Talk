@@ -363,6 +363,7 @@ if HAS_PYQT6:
 
             elif state == OverlayState.PROCESSING:
                 self._waveform.freeze()
+                self._waveform.hide()
                 self._spinner.set_color(self._processing_color)
                 self._spinner.show()
                 self._spinner.start()
@@ -373,6 +374,7 @@ if HAS_PYQT6:
                 self._detail_label.show()
 
             elif state == OverlayState.TRANSLATING:
+                self._waveform.hide()
                 self._spinner.set_color(self._translating_color)
                 self._spinner.show()
                 self._spinner.start()
@@ -394,6 +396,7 @@ if HAS_PYQT6:
                 self._detail_label.show()
 
             elif state == OverlayState.DONE:
+                self._waveform.hide()
                 self._spinner.stop()
                 self._spinner.hide()
                 self._status_label.setText("✅ Done — pasted!")
@@ -402,7 +405,7 @@ if HAS_PYQT6:
                 self._done_timer.start(1200)
 
             elif state == OverlayState.ERROR:
-                self._waveform.freeze()
+                self._waveform.hide()
                 self._spinner.stop()
                 self._spinner.hide()
                 self._status_label.setText(extra_text or "❌ Error")
