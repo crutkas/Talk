@@ -59,7 +59,7 @@ class SeamlessEngine(TranslationEngine):
         return "SeamlessM4T v2"
 
     def needs_download(self) -> bool:
-        if not HAS_SEAMLESS:
+        if not HAS_SEAMLESS or self._model is not None:
             return False
         cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
         repo_name = self._model_name.replace("/", "--")

@@ -52,7 +52,7 @@ class VoxtralEngine(STTEngine):
         return "Voxtral Transcribe 2"
 
     def needs_download(self) -> bool:
-        if not HAS_VOXTRAL:
+        if not HAS_VOXTRAL or self._model is not None:
             return False
         cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
         repo_name = self._model_name.replace("/", "--")

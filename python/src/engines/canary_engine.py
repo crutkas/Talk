@@ -36,7 +36,7 @@ class CanaryQwenEngine(STTEngine):
         return "Canary Qwen 2.5B"
 
     def needs_download(self) -> bool:
-        if not HAS_NEMO:
+        if not HAS_NEMO or self._model is not None:
             return False
         cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
         repo_name = self._model_name.replace("/", "--")

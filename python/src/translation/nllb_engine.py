@@ -66,7 +66,7 @@ class NLLBEngine(TranslationEngine):
         return "NLLB-200"
 
     def needs_download(self) -> bool:
-        if not HAS_TRANSFORMERS:
+        if not HAS_TRANSFORMERS or self._model is not None:
             return False
         cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
         repo_name = self._model_name.replace("/", "--")

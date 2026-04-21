@@ -64,12 +64,17 @@ class WhisperEngine(STTEngine):
         """Check if the Whisper model needs to be downloaded."""
         if not HAS_FASTER_WHISPER:
             return False
-        # Check if model exists in the default cache directory
+        if self._model is not None:
+            return False
+        # Scan cache for any repo matching this model size
         cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
-        # Model names like "large-v3-turbo" map to repo names
-        model_repo = f"models--Systran--faster-whisper-{self._model_size}"
-        model_path = os.path.join(cache_dir, model_repo)
-        return not os.path.exists(model_path)
+        if not os.path.isdir(cache_dir):
+            return True
+        suffix = f"faster-whisper-{self._model_size}"
+        for entry in os.listdir(cache_dir):
+            if entry.startswith("models--") and entry.endswith(suffix):
+                return False
+        return True
 
     def download_model(self, progress_callback: Any | None = None) -> None:
         """Download the Whisper model with progress updates."""
