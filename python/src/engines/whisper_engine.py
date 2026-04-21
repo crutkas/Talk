@@ -32,8 +32,29 @@ class WhisperEngine(STTEngine):
 
     def __init__(self, model_size: str = "large-v3-turbo", device: str = "auto") -> None:
         self._model_size = model_size
-        self._device = device
+        self._device = self._resolve_device(device)
         self._model: WhisperModel | None = None  # type: ignore[assignment]
+
+    @staticmethod
+    def _resolve_device(device: str) -> str:
+        """Determine the best available device."""
+        if device != "auto":
+            return device
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                return "cuda"
+        except ImportError:
+            pass
+        return "cpu"
+
+    @staticmethod
+    def _compute_type_for_device(device: str) -> str:
+        """Pick the right compute type for the device."""
+        if device == "cuda":
+            return "float16"
+        return "int8"
 
     @property
     def name(self) -> str:
@@ -64,7 +85,7 @@ class WhisperEngine(STTEngine):
         self._model = WhisperModel(
             self._model_size,
             device=self._device,
-            compute_type="auto",
+            compute_type=self._compute_type_for_device(self._device),
         )
 
         if progress_callback:
@@ -76,11 +97,11 @@ class WhisperEngine(STTEngine):
         if self._model is None:
             if not HAS_FASTER_WHISPER:
                 raise RuntimeError("faster-whisper is not installed")
-            logger.info("Loading Whisper model: %s", self._model_size)
+            logger.info("Loading Whisper model: %s on %s", self._model_size, self._device)
             self._model = WhisperModel(
                 self._model_size,
                 device=self._device,
-                compute_type="auto",
+                compute_type=self._compute_type_for_device(self._device),
             )
 
     def transcribe(self, audio_bytes: bytes) -> str:
