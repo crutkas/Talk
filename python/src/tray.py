@@ -140,17 +140,18 @@ class SystemTray:
         menu.addSeparator()
 
         # Settings
-        settings_action = QAction("Open Config...")
-        settings_action.triggered.connect(self._open_config)
-        menu.addAction(settings_action)
+        self._settings_action = QAction("Open Config...")
+        self._settings_action.triggered.connect(self._open_config)
+        menu.addAction(self._settings_action)
 
         menu.addSeparator()
 
         # Quit
-        quit_action = QAction("Exit Talk")
-        quit_action.triggered.connect(self._quit)
-        menu.addAction(quit_action)
+        self._quit_action = QAction("Exit Talk")
+        self._quit_action.triggered.connect(self._quit)
+        menu.addAction(self._quit_action)
 
+        self._menu = menu
         self._tray.setContextMenu(menu)
 
     def _select_model(self, name: str) -> None:
