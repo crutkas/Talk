@@ -147,7 +147,7 @@ class SystemTray:
         menu.addSeparator()
 
         # Quit
-        quit_action = QAction("Quit")
+        quit_action = QAction("Exit Talk")
         quit_action.triggered.connect(self._quit)
         menu.addAction(quit_action)
 
